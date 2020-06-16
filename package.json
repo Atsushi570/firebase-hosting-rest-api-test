@@ -1,0 +1,25 @@
+{
+  "name": "firebase-hosting-rest-api-test",
+  "version": "1.0.0",
+  "description": "for test",
+  "main": "oauth.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/EsashikaAtsushi/firebase-hosting-rest-api-test.git"
+  },
+  "author": "atsushi",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/EsashikaAtsushi/firebase-hosting-rest-api-test/issues"
+  },
+  "homepage": "https://github.com/EsashikaAtsushi/firebase-hosting-rest-api-test#readme",
+  "dependencies": {
+    "google-auth-library": "^6.0.2",
+    "open": "^7.0.4",
+    "request": "^2.88.2",
+    "server-destroy": "^1.0.1"
+  }
+}
