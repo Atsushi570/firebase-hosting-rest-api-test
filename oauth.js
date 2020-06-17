@@ -4,6 +4,8 @@
 const fs = require('fs');
 const crypto = require('crypto');
 const path = require('path');
+const zlib = require('zlib');
+// const streams = require('memory-streams');
 
 // npmパッケージを読み込む
 const request = require('request');
@@ -15,9 +17,9 @@ const keys = require('./jwt.keys.json');
 const siteName = keys.project_id;
 
 // アップロードするファイルのsha256ハッシュ
-const deployTargetPath = './public/404.html.gz'
-const buf = fs.readFileSync(path.resolve(__dirname, deployTargetPath));
-const fileHash = crypto.createHash('sha256').update(buf, 'utf8').digest('hex');
+const deployTargetPath = './public/404.html'
+const deployFile = zlib.gzipSync(fs.readFileSync(deployTargetPath))
+const fileHash = crypto.createHash('sha256').update(deployFile, 'utf8').digest('hex');
 
 /**
  * エントリーポイント
@@ -59,7 +61,6 @@ async function main() {
 
 };
 
-
 main().catch(console.error);
 
 /**
@@ -80,7 +81,6 @@ async function getAccessToken() {
 
   return result.access_token
 }
-
 
 /**
  * 指定されたサイトで作成されているリリース情報を取得する
@@ -216,7 +216,7 @@ function uploadFiles(access_token, uploadUrl, path) {
       }
     }
 
-    const data = fs.readFileSync(path);
+    const data = deployFile;
     const options = {
       url: uploadUrl + '/' + fileHash,
       method: 'POST',
