@@ -9,10 +9,9 @@
 ### proc.1 google apis を使用するためのaccess tokenを取得する
 #### 現状
 - APIを叩くためのaccess tokenを取得する
-- OAuth2.0を利用して実装しているため、一度ブラウザでの作業が必要になってしまっている
+- 認証はJWTを利用している
 #### 今後
 - JWTによる認証に変更してCircleCIで動作可能にする
-  - JWTでaccess tokenを取得する方法での実装に変更する
   - 本番アカウントでのgoogle apisのサービスアカウント作成とキーの入手する
   - キーをもとにJWTの作成してCircleCIで使えるようにする（環境変数に設定？）
 #### 参考

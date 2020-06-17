@@ -1,19 +1,18 @@
 // https://hosting-test-c0336.web.app/
 
-const { OAuth2Client } = require('google-auth-library');
-const http = require('http'); // jwt にしたら不要なはず
-const url = require('url');
-const open = require('open');
-const destroyer = require('server-destroy'); // jwt にしたら不要なはず
-const request = require('request');
+// node組み込みモジュールを読み込む
 const fs = require('fs');
 const crypto = require('crypto');
 const path = require('path');
 
+// npmパッケージを読み込む
+const request = require('request');
+const { JWT } = require('google-auth-library');
+
 // googleのAPIからダウンロードしたOAuth2.0の認証情報を読み込む
 // https://console.developers.google.com/
-const keys = require('./client_secret.json');
-const siteName = keys.web.project_id;
+const keys = require('./jwt.keys.json');
+const siteName = keys.project_id;
 
 // アップロードするファイルのsha256ハッシュ
 const deployTargetPath = './public/404.html.gz'
@@ -24,7 +23,7 @@ const fileHash = crypto.createHash('sha256').update(buf, 'utf8').digest('hex');
  * エントリーポイント
  */
 async function main() {
-  let proc = 1; 
+  let proc = 1;
 
   // API リクエストを認証して承認するためのaccess tokenを取得する
   const access_token = await getAccessToken();
@@ -58,6 +57,7 @@ async function main() {
   // デプロイ用にバージョンをリリースする
   const responseCallDeploy = await callDeploy(access_token, responseVersionCreate.name)
   console.log(`proc${proc++} callDeploy finish ! response status:${responseCallDeploy.statusCode}`);
+
 };
 
 
@@ -69,63 +69,19 @@ main().catch(console.error);
  * keysに認証情報が格納されている必要がある
  * サーバ上で完結するためにはJWTでのToken取得に書き換えなければならない
  */
-function getAccessToken() {
-  return new Promise((resolve, reject) => {
-    console.log('start step1 getAccessToken');
-    const oAuth2Client = new OAuth2Client(
-      keys.web.client_id,
-      keys.web.client_secret,
-      keys.web.redirect_uris[0]
-    );
+async function getAccessToken() {
+  const client = new JWT(
+    keys.client_email,
+    null,
+    keys.private_key,
+    ['https://www.googleapis.com/auth/firebase'],
+    null
+  );
+  const result = await client.authorize().catch(console.error());
 
-    // 同意画面に使用されるURLを生成する
-    const authorizeUrl = oAuth2Client.generateAuthUrl({
-      access_type: 'offline',
-      scope: 'https://www.googleapis.com/auth/firebase'
-    });
-
-    // サーバを立ててoAuthコールバックを受ける
-    // この例では立てたサーバににリクエストを送る
-    const server = http
-      .createServer(async (req, res) => {
-
-        const qs = new url.URL(req.url, 'http://localhost:3000')
-          .searchParams;
-
-        const payLoad = {
-          client_id: keys.web.client_id,
-          client_secret: keys.web.client_secret,
-          redirect_uri: keys.web.redirect_uris[0],
-          grant_type: 'authorization_code',
-          code: qs.get('code')
-        }
-
-        const options = {
-          url: 'https://accounts.google.com/o/oauth2/token',
-          method: 'POST',
-          headers: {
-            'Content-type': 'application/json',
-          },
-          json: payLoad
-        };
-
-        function callback(error, response, body) {
-          if (!error && response.statusCode == 200) {
-            resolve(response.body.access_token);
-          } else {
-            console.log(`step1 error: ${response.message}`);
-          }
-        }
-        request(options, callback);
-      });
-
-    server.listen(3000, () => {
-      // open the browser to the authorize url to start the workflow
-      open(authorizeUrl, { wait: false }).then(cp => cp.unref());
-    });
-    destroyer(server);
-  });
+  return result.access_token
 }
+
 
 /**
  * 指定されたサイトで作成されているリリース情報を取得する
@@ -237,7 +193,7 @@ function setTargetFiles(access_token, versionId) {
         Authorization: 'Bearer ' + access_token,
       },
       json: {
-        files:{
+        files: {
           "/404.html": fileHash
         }
       }

@@ -18,8 +18,6 @@
   "homepage": "https://github.com/EsashikaAtsushi/firebase-hosting-rest-api-test#readme",
   "dependencies": {
     "google-auth-library": "^6.0.2",
-    "open": "^7.0.4",
-    "request": "^2.88.2",
-    "server-destroy": "^1.0.1"
+    "request": "^2.88.2"
   }
 }
