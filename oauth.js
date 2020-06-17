@@ -3,7 +3,6 @@
 // node組み込みモジュールを読み込む
 const fs = require('fs');
 const crypto = require('crypto');
-const path = require('path');
 const zlib = require('zlib');
 // const streams = require('memory-streams');
 
@@ -11,7 +10,7 @@ const zlib = require('zlib');
 const request = require('request');
 const { JWT } = require('google-auth-library');
 
-// googleのAPIからダウンロードしたOAuth2.0の認証情報を読み込む
+// googleのAPIからダウンロードしたサービスアカウントの認証情報を読み込む
 // https://console.developers.google.com/
 const keys = require('./jwt.keys.json');
 const siteName = keys.project_id;
@@ -205,10 +204,10 @@ function setTargetFiles(access_token, versionId) {
  * 必要なファイルをアップロードする
  * 取得したuploadUrlにアップロードするファイルハッシュを追加してgzをアップロードする
  */
-function uploadFiles(access_token, uploadUrl, path) {
+function uploadFiles(access_token, uploadUrl) {
   return new Promise((resolve) => {
 
-    function callback(error, response, body) {
+    function callback(error, response) {
       if (!error && response.statusCode == 200) {
         resolve(response);
       } else {
@@ -237,7 +236,7 @@ function uploadFiles(access_token, uploadUrl, path) {
 function finalizeStatus(access_token, versionId) {
   return new Promise((resolve) => {
 
-    function callback(error, response, body) {
+    function callback(error, response) {
       if (!error && response.statusCode == 200) {
         resolve(response);
       } else {
@@ -264,7 +263,7 @@ function finalizeStatus(access_token, versionId) {
 function callDeploy(access_token, versionId) {
   return new Promise((resolve) => {
 
-    function callback(error, response, body) {
+    function callback(error, response) {
       if (!error && response.statusCode == 200) {
         resolve(response);
       } else {
