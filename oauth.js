@@ -30,32 +30,31 @@ async function main() {
   console.log(`proc${proc++} getAccessToken finish ! access token:${access_token}`);
 
   // 最後にreleasesされたサイトのversionNameを取得する
-  const latestRelease = await getLatestRelease(access_token);
-  const latestVersion = latestRelease.releases[0].version.name;
-  console.log(`proc${proc++} getLatestRelease finish ! latest version name:${latestVersion}`);
+  const latestVersion = await getLatestVersionName(access_token);
+  console.log(`proc${proc++} getLatestVersionName finish ! latest version name:${latestVersion}`);
 
   // versionNameで指定したversionのファイル構成を取得する
   const latestDeployedFiles = await getVersionFiles(access_token, latestVersion);
-  console.log(`proc${proc++} getVersionFiles finish ! files:${latestDeployedFiles}`);
+  console.log(`proc${proc++} getVersionFiles finish ! files:${latestDeployedFiles.files.length}`);
 
   // サイトの新しいバージョンを作成する
-  const responseVersionCreate = await createSiteVersion(access_token);
-  console.log(`proc${proc++} createSiteVersion finish ! response status:${responseVersionCreate.status}, version name:${responseVersionCreate.name}`);
+  const createdVersionName = await createSiteVersion(access_token);
+  console.log(`proc${proc++} createSiteVersion finish !  version name:${createdVersionName}`);
 
-  // デプロイするファイルのリストを指定する
-  const responseSetTargetFiles = await setTargetFiles(access_token, responseVersionCreate.name)
-  console.log(`proc${proc++} setTargetFiles finish ! uploadURL:${responseSetTargetFiles.uploadUrl}`);
+  // デプロイするファイルのリストを指定してアップロード先のURLを取得する
+  const uploadURL = await setTargetFiles(access_token, createdVersionName)
+  console.log(`proc${proc++} setTargetFiles finish ! uploadURL:${uploadURL}`);
 
   // 必要なファイルをアップロードする
-  const responseUploadFiles = await uploadFiles(access_token, responseSetTargetFiles.uploadUrl, deployTargetPath)
+  const responseUploadFiles = await uploadFiles(access_token, uploadURL, deployTargetPath)
   console.log(`proc${proc++} uploadFiles finish ! response status:${responseUploadFiles.statusCode}`);
 
   // バージョンのステータスを FINALIZED に更新する
-  const responseFinalize = await finalizeStatus(access_token, responseVersionCreate.name)
+  const responseFinalize = await finalizeStatus(access_token, createdVersionName)
   console.log(`proc${proc++} finalizeStatus finish ! response status:${responseFinalize.statusCode}`);
 
   // デプロイ用にバージョンをリリースする
-  const responseCallDeploy = await callDeploy(access_token, responseVersionCreate.name)
+  const responseCallDeploy = await callDeploy(access_token, createdVersionName)
   console.log(`proc${proc++} callDeploy finish ! response status:${responseCallDeploy.statusCode}`);
 
 };
@@ -87,14 +86,14 @@ async function getAccessToken() {
  * 指定されたサイトで作成されているリリース情報を取得する
  * クエリパラメータpageSize=1を指定しているため最新のリリース情報のみ取得する
  */
-function getLatestRelease(access_token) {
+function getLatestVersionName(access_token) {
   return new Promise((resolve) => {
 
     function callback(error, response, body) {
       if (!error && response.statusCode == 200) {
-        resolve(JSON.parse(body));
+        resolve(JSON.parse(body).releases[0].version.name);
       } else {
-        console.log(`error occurred at getLatestRelease: ${error}`)
+        console.log(`error occurred at getLatestVersionName: ${error}`)
       }
     }
 
@@ -142,7 +141,7 @@ function createSiteVersion(access_token) {
 
     function callback(error, response, body) {
       if (!error && response.statusCode == 200) {
-        resolve(body);
+        resolve(body.name);
       } else {
         console.log(`error occurred at createSiteVersion: ${error}`)
       }
@@ -171,7 +170,7 @@ function createSiteVersion(access_token) {
 }
 
 /**
- * デプロイするファイルのリストを指定する
+ * デプロイするファイルのリストを指定してアップロード先のURLを取得する
  * 事前にデプロイするファイルをgzipしておく
  */
 function setTargetFiles(access_token, versionId) {
@@ -179,7 +178,7 @@ function setTargetFiles(access_token, versionId) {
 
     function callback(error, response, body) {
       if (!error && response.statusCode == 200) {
-        resolve(body);
+        resolve(body.uploadUrl);
       } else {
         console.log(`error occurred at setTargetFiles: ${response.body}`)
       }
