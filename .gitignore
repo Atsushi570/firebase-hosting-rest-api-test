@@ -89,3 +89,6 @@ sw.*
 # Vim swap files
 *.swp
 scripts/jwt.keys.json
+
+# Storybook
+storybook-static/
