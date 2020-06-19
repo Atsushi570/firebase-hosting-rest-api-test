@@ -4,8 +4,14 @@ jobs:
    docker:
      - image: alpine:3.7
    steps:
+     - checkout
      - run:
          name: 最初の一歩
          command: |
            echo 'Hello World!'
            echo 'This is the delivery pipeline'
+     - run:
+         name: コードの取得
+         command: |
+           ls -al
+           echo '^^^That should look familiar^^^'
