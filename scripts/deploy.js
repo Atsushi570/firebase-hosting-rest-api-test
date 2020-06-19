@@ -131,9 +131,10 @@ async function getAccessToken() {
     ['https://www.googleapis.com/auth/firebase'],
     null
   )
-  const result = await client.authorize().catch(console.error())
-
-  return result.access_token
+  if (keys.client_email) {
+    const result = await client.authorize().catch(console.error())
+    return result.access_token
+  }
 }
 
 /**
