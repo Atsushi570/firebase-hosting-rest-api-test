@@ -16,11 +16,10 @@ const { JWT } = require('google-auth-library')
 // https://console.developers.google.com/
 console.log(process.env.PROJECT_ID)
 const keys = {
-  siteName: process.env.PROJECT_ID,
+  site_name: process.env.PROJECT_ID,
   client_email: process.env.CLIENT_EMAIL,
   private_key: process.env.PRIVATE_KEY.replace(/\\n/g, '\n')
 }
-const siteName = keys.project_id
 
 // アップロードするファイルのsha256ハッシュ
 const deployTargetPath = readdirRecursively(
@@ -331,7 +330,7 @@ function callDeploy(accessToken, versionId) {
     }
 
     const options = {
-      url: `https://firebasehosting.googleapis.com/v1beta1/sites/${siteName}/releases?versionName=${versionId}`,
+      url: `https://firebasehosting.googleapis.com/v1beta1/sites/${keys.site_name}/releases?versionName=${versionId}`,
       method: 'POST',
       headers: {
         Authorization: 'Bearer ' + accessToken
