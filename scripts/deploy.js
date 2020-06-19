@@ -21,15 +21,21 @@ const keys = require('./jwt.keys.json') // localでの検証用
 // }
 
 // 指定したディレクトリにあるファイルを再帰的に読み込み、アップロードするファイルオブジェクトのリストを作成する
-const deployTargetPath = readdirRecursively(
+const deployTargetPaths = readdirRecursively(
   path.join(path.dirname(__dirname), 'public')
-)[0]
-const deployFile = zlib.gzipSync(fs.readFileSync(deployTargetPath))
-const fileHash = crypto
-  .createHash('sha256')
-  .update(deployFile, 'utf8')
-  .digest('hex')
-
+)
+const deployFiles = []
+for (const key of Object.keys(deployTargetPaths)) {
+  const fileData = zlib.gzipSync(fs.readFileSync(deployTargetPaths[key]))
+  deployFiles.push({
+    fileName: path.basename(deployTargetPaths[key]),
+    fileData,
+    fileHash: crypto
+      .createHash('sha256')
+      .update(fileData, 'utf8')
+      .digest('hex')
+  })
+}
 /**
  * エントリーポイント
  */
@@ -63,14 +69,18 @@ async function main() {
   )
 
   // デプロイするファイルのリストを指定してアップロード先のURLを取得する
-  const uploadURL = await setTargetFiles(accessToken, createdVersionName)
+  const uploadURL = await setTargetFiles(
+    accessToken,
+    createdVersionName,
+    deployFiles[0]
+  )
   console.log(`proc${proc++} setTargetFiles finish ! uploadURL:${uploadURL}`)
 
   // 必要なファイルをアップロードする
   const responseUploadFiles = await uploadFiles(
     accessToken,
     uploadURL,
-    deployTargetPath
+    deployFiles[0]
   )
   console.log(
     `proc${proc++} uploadFiles finish ! response status:${
@@ -223,7 +233,7 @@ function createSiteVersion(accessToken) {
  * デプロイするファイルのリストを指定してアップロード先のURLを取得する
  * 事前にデプロイするファイルをgzipしておく
  */
-function setTargetFiles(accessToken, versionId) {
+function setTargetFiles(accessToken, versionId, deployFile) {
   return new Promise((resolve) => {
     function callback(error, response, body) {
       if (!error && response.statusCode === 200) {
@@ -245,7 +255,7 @@ function setTargetFiles(accessToken, versionId) {
       },
       json: {
         files: {
-          '/404.html': fileHash
+          '/404.html': deployFile.fileHash
         }
       }
     }
@@ -257,7 +267,7 @@ function setTargetFiles(accessToken, versionId) {
  * 必要なファイルをアップロードする
  * 取得したuploadUrlにアップロードするファイルハッシュを追加してgzをアップロードする
  */
-function uploadFiles(accessToken, uploadUrl) {
+function uploadFiles(accessToken, uploadUrl, deployFile) {
   return new Promise((resolve) => {
     function callback(error, response) {
       if (!error && response.statusCode === 200) {
@@ -267,16 +277,15 @@ function uploadFiles(accessToken, uploadUrl) {
       }
     }
 
-    const data = deployFile
     const options = {
-      url: uploadUrl + '/' + fileHash,
+      url: uploadUrl + '/' + deployFile.fileHash,
       method: 'POST',
       headers: {
         'Content-type': 'application/octet-stream',
         Authorization: 'Bearer ' + accessToken,
-        'Content-Length': data.length
+        'Content-Length': deployFile.fileData.length
       },
-      body: data
+      body: deployFile.fileData
     }
     request(options, callback)
   })
