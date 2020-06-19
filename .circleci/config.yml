@@ -1,13 +1,14 @@
 version: 2.0
 jobs:
- build:
-   # ビルド済みイメージ：https://circleci.com/docs/ja/2.0/circleci-images/
-   docker:
-     - image: circleci/node:10-browsers
-   steps:
-     - checkout
-     - run: npm install
-     - run:
-         name: firebase hosting REST APIでのデプロイを実行
-         command: |
-           node ./scripts/deploy.js
+  build:
+  # ビルド済みイメージ：https://circleci.com/docs/ja/2.0/circleci-images/
+    docker:
+      - image: circleci/node:10-browsers
+    steps:
+      - checkout
+      # - run: npm install
+      - run:
+        name: firebase hosting REST APIでのデプロイを実行
+          command: |
+          echo "${PROJECT_ID}"
+          # node ./scripts/deploy.js
