@@ -33,7 +33,7 @@ jobs:
       - checkout
       - run: 
           name: "echo environment variables from org-global context"
-          command: echo "{$PROJECT_ID}"
+          command: echo ${PROJECT_ID}
       # - run:
       #     name: npm install
       #     working_directory: ~/workspace/front/src
