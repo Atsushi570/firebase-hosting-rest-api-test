@@ -34,10 +34,12 @@ jobs:
       - run: 
           name: "echo environment variables from org-global context"
           command: echo ${PROJECT_ID}
-      # - run:
-      #     name: npm install
-      #     working_directory: ~/workspace/front/src
-      #     command: npm install
+      - run:
+          name: npm install
+          command: npm install
+      - run:
+          name: deploy
+          command node ./scripts/deploy.js
 
   deploy_storybook:
     executor:
