@@ -31,15 +31,6 @@ jobs:
       name: default
     steps:
       - checkout
-      - run: 
-          name: "echo environment variables from org-global context"
-          command: echo ${PROJECT_ID:0:-4}
-      - run: 
-          name: "echo environment variables from org-global context"
-          command: echo ${CLIENT_ID:0:-4}
-      - run: 
-          name: "echo environment variables from org-global context"
-          command: echo ${PRIVATE_KEY:0:-4}
       - run:
           name: npm install
           command: npm install
@@ -64,7 +55,6 @@ workflows:
   build_test:
     jobs:
       - setup:
-          context: jwt
       # - deploy_storybook:
       #     requires:
       #       - setup
