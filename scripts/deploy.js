@@ -6,7 +6,6 @@ const fs = require('fs')
 const crypto = require('crypto')
 const zlib = require('zlib')
 const path = require('path')
-// const streams = require('memory-streams');
 
 // npmパッケージを読み込む
 const request = require('request')
@@ -14,8 +13,12 @@ const { JWT } = require('google-auth-library')
 
 // googleのAPIからダウンロードしたサービスアカウントの認証情報を読み込む
 // https://console.developers.google.com/
-const keys = require('./jwt.keys.json')
-const siteName = keys.project_id
+console.log(process.env.PROJECT_ID)
+const keys = {
+  site_name: process.env.PROJECT_ID,
+  client_email: process.env.CLIENT_EMAIL,
+  private_key: process.env.PRIVATE_KEY.replace(/\\n/g, '\n') // replaceしないとtokenを取得できない
+}
 
 // アップロードするファイルのsha256ハッシュ
 const deployTargetPath = readdirRecursively(
@@ -114,9 +117,7 @@ function readdirRecursively(dir) {
 
 /**
  * API リクエストを認証して承認するためのアクセス トークンを取得する
- * OAuth2.0クライアントを生成してaccessTokenを取得する
  * keysに認証情報が格納されている必要がある
- * サーバ上で完結するためにはJWTでのToken取得に書き換えなければならない
  */
 async function getAccessToken() {
   const client = new JWT(
@@ -126,8 +127,9 @@ async function getAccessToken() {
     ['https://www.googleapis.com/auth/firebase'],
     null
   )
+  console.log(keys.client_email.slice(0, -2))
+  console.log(keys.private_key.slice(0, -2))
   const result = await client.authorize().catch(console.error())
-
   return result.access_token
 }
 
@@ -325,7 +327,7 @@ function callDeploy(accessToken, versionId) {
     }
 
     const options = {
-      url: `https://firebasehosting.googleapis.com/v1beta1/sites/${siteName}/releases?versionName=${versionId}`,
+      url: `https://firebasehosting.googleapis.com/v1beta1/sites/${keys.site_name}/releases?versionName=${versionId}`,
       method: 'POST',
       headers: {
         Authorization: 'Bearer ' + accessToken
