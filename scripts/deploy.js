@@ -72,7 +72,7 @@ async function main() {
   const uploadURL = await setTargetFiles(
     accessToken,
     createdVersionName,
-    deployFiles[0]
+    deployFiles
   )
   console.log(`proc${proc++} setTargetFiles finish ! uploadURL:${uploadURL}`)
 
@@ -233,7 +233,7 @@ function createSiteVersion(accessToken) {
  * デプロイするファイルのリストを指定してアップロード先のURLを取得する
  * 事前にデプロイするファイルをgzipしておく
  */
-function setTargetFiles(accessToken, versionId, deployFile) {
+function setTargetFiles(accessToken, versionId, deployFiles) {
   return new Promise((resolve) => {
     function callback(error, response, body) {
       if (!error && response.statusCode === 200) {
@@ -241,6 +241,11 @@ function setTargetFiles(accessToken, versionId, deployFile) {
       } else {
         console.log(`error occurred at setTargetFiles: ${response.body}`)
       }
+    }
+
+    const files = {}
+    for (const key of Object.keys(deployFiles)) {
+      files[`/${deployFiles[key].fileName}`] = deployFiles[key].fileHash
     }
 
     const options = {
@@ -254,9 +259,7 @@ function setTargetFiles(accessToken, versionId, deployFile) {
         Authorization: 'Bearer ' + accessToken
       },
       json: {
-        files: {
-          '/404.html': deployFile.fileHash
-        }
+        files
       }
     }
     request(options, callback)
