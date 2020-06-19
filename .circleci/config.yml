@@ -26,20 +26,25 @@ jobs:
       #     working_directory: ~/workspace/front/src
       #     command: npm install 
 
-  # deploy_storybook:
-  #   executor:
-  #     name: default
-  #   steps:
-  #     - checkout
-  #     - restore_modules
-  #     - build_storybook
-  #     - run:
-  #         name: deploy storybook to Firebase Hosting
-  #         working_directory: ~/workspace/front/src
-  #         command: ./node_modules/.bin/firebase deploy --token=$FIREBASE_TOKEN
+  deploy_storybook:
+    executor:
+      name: default
+    steps:
+      - checkout
+      - command: echo deploy
+      # - restore_modules
+      # - build_storybook
+      # - run:
+      #     name: deploy storybook to Firebase Hosting
+      #     working_directory: ~/workspace/front/src
+      #     command: ./node_modules/.bin/firebase deploy --token=$FIREBASE_TOKEN
 
 workflows:
   build_test:
     jobs:
       - setup:
           - context: jwt
+      - deploy_storybook:
+          requires:
+            - setup
+
