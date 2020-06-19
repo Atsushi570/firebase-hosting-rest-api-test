@@ -5,13 +5,26 @@ executors:
     docker:
   # ビルド済みイメージ：https://circleci.com/docs/ja/2.0/circleci-images/
         - image: circleci/node:10-browsers
-  # build_storybook:
-  #   steps:
-  #     - run: 
-  #         name: sotrybookをビルド
-  #         working_directory: ~/workspace/front/src
-  #         command: npm run build-storybook
-
+commands:
+  restore_modules:
+    steps:
+      - restore_cache:
+          name: Restore node_modules
+          key: repo-{{ checksum "front/src/package.json" }}
+  save_modules:
+    steps:
+      - save_cache:
+          name: Save node_modules
+          key: repo-{{ checksum "front/src/package.json" }}
+          paths: 
+            - ~/workspace/front/src/node_modules
+  build_storybook:
+    steps:
+      - run: 
+          name: sotrybookをビルド
+          working_directory: ~/workspace/front/src
+          command: npm run build-storybook
+          
 jobs:
   setup: 
     executor:
@@ -24,7 +37,7 @@ jobs:
       # - run:
       #     name: npm install
       #     working_directory: ~/workspace/front/src
-      #     command: npm install 
+      #     command: npm install
 
   deploy_storybook:
     executor:
