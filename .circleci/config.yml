@@ -5,6 +5,7 @@ executors:
     docker:
   # ビルド済みイメージ：https://circleci.com/docs/ja/2.0/circleci-images/
         - image: circleci/node:10-browsers
+            - context: jwt
 commands:
   restore_modules:
     steps:
@@ -24,7 +25,7 @@ commands:
           name: sotrybookをビルド
           working_directory: ~/workspace/front/src
           command: npm run build-storybook
-          
+
 jobs:
   setup: 
     executor:
@@ -55,8 +56,7 @@ jobs:
 workflows:
   build_test:
     jobs:
-      - setup:
-          - context: jwt
+      - setup
       - deploy_storybook:
           requires:
             - setup
