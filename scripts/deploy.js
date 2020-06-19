@@ -14,6 +14,7 @@ const { JWT } = require('google-auth-library')
 
 // googleのAPIからダウンロードしたサービスアカウントの認証情報を読み込む
 // https://console.developers.google.com/
+console.log(process.env.PROJECT_ID)
 const keys = require('./jwt.keys.json')
 const siteName = keys.project_id
 
