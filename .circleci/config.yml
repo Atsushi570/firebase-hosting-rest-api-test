@@ -12,3 +12,49 @@ jobs:
           name: "firebase hosting REST APIでのデプロイを実行"
           command: echo "${PROJECT_ID}""
           # node ./scripts/deploy.js
+
+version: 2.1
+
+executors:
+  default:
+    docker:
+  # ビルド済みイメージ：https://circleci.com/docs/ja/2.0/circleci-images/
+        - image: circleci/node:10-browsers
+  # build_storybook:
+  #   steps:
+  #     - run: 
+  #         name: sotrybookをビルド
+  #         working_directory: ~/workspace/front/src
+  #         command: npm run build-storybook
+
+jobs:
+  setup: 
+    executor:
+      name: default
+    steps:
+      - checkout
+      - run: 
+          name: "echo environment variables from org-global context"
+          command: echo $PROJECT_ID
+      # - run:
+      #     name: npm install
+      #     working_directory: ~/workspace/front/src
+      #     command: npm install 
+
+  # deploy_storybook:
+  #   executor:
+  #     name: default
+  #   steps:
+  #     - checkout
+  #     - restore_modules
+  #     - build_storybook
+  #     - run:
+  #         name: deploy storybook to Firebase Hosting
+  #         working_directory: ~/workspace/front/src
+  #         command: ./node_modules/.bin/firebase deploy --token=$FIREBASE_TOKEN
+
+workflows:
+  build_test:
+    jobs:
+      - setup:
+          - context: jwt
