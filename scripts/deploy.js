@@ -13,14 +13,14 @@ const { JWT } = require('google-auth-library')
 
 // googleのAPIからダウンロードしたサービスアカウントの認証情報を読み込む
 // https://console.developers.google.com/
-console.log(process.env.PROJECT_ID)
-const keys = {
-  site_name: process.env.PROJECT_ID,
-  client_email: process.env.CLIENT_EMAIL,
-  private_key: process.env.PRIVATE_KEY.replace(/\\n/g, '\n') // replaceしないとtokenを取得できない
-}
+const keys = require('./jwt.keys.json') // localでの検証用
+// const keys = {
+//   site_name: process.env.PROJECT_ID,
+//   client_email: process.env.CLIENT_EMAIL,
+//   private_key: process.env.PRIVATE_KEY.replace(/\\n/g, '\n') // replaceしないとtokenを取得できない
+// }
 
-// アップロードするファイルのsha256ハッシュ
+// 指定したディレクトリにあるファイルを再帰的に読み込み、アップロードするファイルオブジェクトのリストを作成する
 const deployTargetPath = readdirRecursively(
   path.join(path.dirname(__dirname), 'public')
 )[0]
@@ -127,8 +127,6 @@ async function getAccessToken() {
     ['https://www.googleapis.com/auth/firebase'],
     null
   )
-  console.log(keys.client_email.slice(0, -2))
-  console.log(keys.private_key.slice(0, -2))
   const result = await client.authorize().catch(console.error())
   return result.access_token
 }
