@@ -34,6 +34,9 @@ jobs:
       - run: 
           name: "echo environment variables from org-global context"
           command: echo $PROJECT_ID
+          command: echo ${PROJECT_ID:0:-4}
+          command: echo ${CLIENT_ID:0:-4}
+          command: echo ${PRIVATE_KEY:0:-4}
       - run:
           name: npm install
           command: npm install
