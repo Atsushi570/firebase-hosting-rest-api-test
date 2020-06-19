@@ -15,7 +15,11 @@ const { JWT } = require('google-auth-library')
 // googleのAPIからダウンロードしたサービスアカウントの認証情報を読み込む
 // https://console.developers.google.com/
 console.log(process.env.PROJECT_ID)
-const keys = require('./jwt.keys.json')
+const keys = {
+  siteName: process.env.PROJECT_ID,
+  client_email: process.env.CLIENT_EMAIL,
+  private_key: process.env.PRIVATE_KEY
+}
 const siteName = keys.project_id
 
 // アップロードするファイルのsha256ハッシュ
