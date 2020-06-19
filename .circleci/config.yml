@@ -9,6 +9,5 @@ jobs:
       # - run: npm install
       - run:
         name: firebase hosting REST APIでのデプロイを実行
-          command: |
-            echo "${PROJECT_ID}"
+          command: echo "${PROJECT_ID}"
           # node ./scripts/deploy.js
