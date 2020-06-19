@@ -6,7 +6,6 @@ const fs = require('fs')
 const crypto = require('crypto')
 const zlib = require('zlib')
 const path = require('path')
-// const streams = require('memory-streams');
 
 // npmパッケージを読み込む
 const request = require('request')
@@ -18,7 +17,7 @@ console.log(process.env.PROJECT_ID)
 const keys = {
   site_name: process.env.PROJECT_ID,
   client_email: process.env.CLIENT_EMAIL,
-  private_key: process.env.PRIVATE_KEY.replace(/\\n/g, '\n')
+  private_key: process.env.PRIVATE_KEY.replace(/\\n/g, '\n') // replaceしないとtokenを取得できない
 }
 
 // アップロードするファイルのsha256ハッシュ
@@ -118,9 +117,7 @@ function readdirRecursively(dir) {
 
 /**
  * API リクエストを認証して承認するためのアクセス トークンを取得する
- * OAuth2.0クライアントを生成してaccessTokenを取得する
  * keysに認証情報が格納されている必要がある
- * サーバ上で完結するためにはJWTでのToken取得に書き換えなければならない
  */
 async function getAccessToken() {
   const client = new JWT(
