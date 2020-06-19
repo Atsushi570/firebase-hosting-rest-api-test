@@ -7,16 +7,6 @@ jobs:
    steps:
      - checkout
      - run:
-         name: 最初の一歩
+         name: firebase hosting REST APIでのデプロイを実行
          command: |
-           echo 'Hello World!'
-           echo 'This is the delivery pipeline'
-     - run:
-         name: コードの取得
-         command: |
-           ls -al
-           echo '^^^That should look familiar^^^'
-     - run:
-         name: 独自コンテナで実行
-         command: |
-           node -v
+           node ./scripts/deploy.js
