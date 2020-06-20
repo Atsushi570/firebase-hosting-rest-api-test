@@ -13,16 +13,17 @@ const { JWT } = require('google-auth-library')
 
 // googleのAPIからダウンロードしたサービスアカウントの認証情報を読み込む
 // https://console.developers.google.com/
-// const keys = require('./jwt.keys.json') // localでの検証用
-const keys = {
-  site_name: process.env.PROJECT_ID,
-  client_email: process.env.CLIENT_EMAIL,
-  private_key: process.env.PRIVATE_KEY.replace(/\\n/g, '\n') // replaceしないとtokenを取得できない
-}
+const keys = require('./jwt.keys.json') // localでの検証用
+keys.site_name = keys.project_id
+// const keys = {
+//   site_name: process.env.PROJECT_ID,
+//   client_email: process.env.CLIENT_EMAIL,
+//   private_key: process.env.PRIVATE_KEY.replace(/\\n/g, '\n') // replaceしないとtokenを取得できない
+// }
 
 // 指定したディレクトリにあるファイルを再帰的に読み込み、アップロードするファイルオブジェクトのリストを作成する
 const deployTargetPaths = readdirRecursively(
-  path.join(path.dirname(__dirname), 'public')
+  path.join(path.dirname(__dirname), 'storybook-static')
 )
 const deployFiles = []
 for (const key of Object.keys(deployTargetPaths)) {
@@ -78,16 +79,20 @@ async function main() {
   console.log(uploadRequiredHashes)
 
   // 必要なファイルをアップロードする
-  for (const key of Object.keys(deployFiles)) {
-    if (uploadRequiredHashes.includes(deployFiles[key].fileHash)) {
-      const responseUploadFiles = await uploadFiles(
-        accessToken,
-        uploadUrl,
-        deployFiles[key]
-      )
-      console.log(
-        `proc${proc}[sub routine] uploadFiles ${deployFiles[key].fileHash} response status${responseUploadFiles.statusCode}`
-      )
+  if (uploadRequiredHashes) {
+    for (const key of Object.keys(deployFiles)) {
+      if (uploadRequiredHashes.includes(deployFiles[key].fileHash)) {
+        const responseUploadFiles = await uploadFiles(
+          accessToken,
+          uploadUrl,
+          deployFiles[key]
+        )
+        console.log(
+          `proc${proc}[sub routine] uploadFiles ${deployFiles[key].fileHash} response status${responseUploadFiles.statusCode}`
+        )
+      } else {
+        console.log('no need to upload file.')
+      }
     }
   }
   console.log(`proc${proc++} uploadFiles finish ! `)
