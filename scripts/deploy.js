@@ -45,7 +45,7 @@ const deployFiles = []
 for (const key of Object.keys(deployTargetPaths)) {
   const binaryData = zlib.gzipSync(fs.readFileSync(deployTargetPaths[key]))
   deployFiles.push({
-    path: `/${process.env.$CIRCLE_BRANCH}/${deployTargetPaths[key].replace(
+    path: `/${process.env.CIRCLE_BRANCH}${deployTargetPaths[key].replace(
       storybookDirectoryPath,
       ''
     )}`,
@@ -90,10 +90,6 @@ async function main() {
         hash: file.hash
       })
     }
-  }
-
-  for (const file of deployFiles) {
-    console.log(file.path)
   }
 
   // サイトの新しいバージョンを作成する
