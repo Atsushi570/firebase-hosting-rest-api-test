@@ -21,10 +21,24 @@ keys.site_name = keys.project_id
 //   private_key: process.env.PRIVATE_KEY.replace(/\\n/g, '\n') // replaceしないとtokenを取得できない
 // }
 
-// 指定したディレクトリにあるファイルを再帰的に読み込み、アップロードするファイルオブジェクトのリストを作成する
+// 指定したディレクトリにあるファイルを再帰的に読み込み、ファイルパスのリストを作成する
+const readdirRecursively = (dir, files = []) => {
+  const dirents = fs.readdirSync(dir, { withFileTypes: true })
+  const dirs = []
+  for (const dirent of dirents) {
+    if (dirent.isDirectory()) dirs.push(`${dir}/${dirent.name}`)
+    if (dirent.isFile()) files.push(`${dir}/${dirent.name}`)
+  }
+  for (const d of dirs) {
+    files = readdirRecursively(d, files)
+  }
+  return files
+}
 const deployTargetPaths = readdirRecursively(
   path.join(path.dirname(__dirname), 'storybook-static')
 )
+
+// アップロードするファイルオブジェクトのリストを作成する
 const deployFiles = []
 for (const key of Object.keys(deployTargetPaths)) {
   const fileData = zlib.gzipSync(fs.readFileSync(deployTargetPaths[key]))
@@ -37,6 +51,7 @@ for (const key of Object.keys(deployTargetPaths)) {
       .digest('hex')
   })
 }
+
 /**
  * エントリーポイント
  */
@@ -116,23 +131,23 @@ async function main() {
 
 main().catch(console.error)
 
-/**
- * 指定したディレクトリ配下に存在するファイルのパスを再帰的に取得してリストで返却する
- * @param {string} dir 探索対象のディレクトリパス
- */
-function readdirRecursively(dir) {
-  let files = []
-  const dirents = fs.readdirSync(dir, { withFileTypes: true })
-  const dirs = []
-  for (const dirent of dirents) {
-    if (dirent.isDirectory()) dirs.push(`${dir}/${dirent.name}`)
-    if (dirent.isFile()) files.push(`${dir}/${dirent.name}`)
-  }
-  for (const d of dirs) {
-    files = readdirRecursively(d, files)
-  }
-  return files
-}
+// /**
+//  * 指定したディレクトリ配下に存在するファイルのパスを再帰的に取得してリストで返却する
+//  * @param {string} dir 探索対象のディレクトリパス
+//  */
+// function readdirRecursively(dir) {
+//   let files = []
+//   const dirents = fs.readdirSync(dir, { withFileTypes: true })
+//   const dirs = []
+//   for (const dirent of dirents) {
+//     if (dirent.isDirectory()) dirs.push(`${dir}/${dirent.name}`)
+//     if (dirent.isFile()) files.push(`${dir}/${dirent.name}`)
+//   }
+//   for (const d of dirs) {
+//     files = readdirRecursively(d, files)
+//   }
+//   return files
+// }
 
 /**
  * API リクエストを認証して承認するためのアクセス トークンを取得する
