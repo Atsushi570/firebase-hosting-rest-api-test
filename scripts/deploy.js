@@ -344,7 +344,7 @@ function callDeploy(accessToken, versionId) {
     }
 
     const options = {
-      url: `https://firebasehosting.googleapis.com/v1beta1/sites/${keys.project_id}/releases?versionName=${versionId}`,
+      url: `https://firebasehosting.googleapis.com/v1beta1/sites/${keys.site_name}/releases?versionName=${versionId}`,
       method: 'POST',
       headers: {
         Authorization: 'Bearer ' + accessToken
