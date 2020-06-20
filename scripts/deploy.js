@@ -92,6 +92,10 @@ async function main() {
     }
   }
 
+  for (const file of deployFiles) {
+    console.log(file.path)
+  }
+
   // サイトの新しいバージョンを作成する
   const createdVersionName = await createSiteVersion(accessToken)
   console.log(
