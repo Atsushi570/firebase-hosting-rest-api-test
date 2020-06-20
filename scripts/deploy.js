@@ -13,23 +13,29 @@ const { JWT } = require('google-auth-library')
 
 // googleのAPIからダウンロードしたサービスアカウントの認証情報を読み込む
 // https://console.developers.google.com/
-console.log(process.env.PROJECT_ID)
+// const keys = require('./jwt.keys.json') // localでの検証用
 const keys = {
   site_name: process.env.PROJECT_ID,
   client_email: process.env.CLIENT_EMAIL,
   private_key: process.env.PRIVATE_KEY.replace(/\\n/g, '\n') // replaceしないとtokenを取得できない
 }
 
-// アップロードするファイルのsha256ハッシュ
-const deployTargetPath = readdirRecursively(
+// 指定したディレクトリにあるファイルを再帰的に読み込み、アップロードするファイルオブジェクトのリストを作成する
+const deployTargetPaths = readdirRecursively(
   path.join(path.dirname(__dirname), 'public')
-)[0]
-const deployFile = zlib.gzipSync(fs.readFileSync(deployTargetPath))
-const fileHash = crypto
-  .createHash('sha256')
-  .update(deployFile, 'utf8')
-  .digest('hex')
-
+)
+const deployFiles = []
+for (const key of Object.keys(deployTargetPaths)) {
+  const fileData = zlib.gzipSync(fs.readFileSync(deployTargetPaths[key]))
+  deployFiles.push({
+    fileName: path.basename(deployTargetPaths[key]),
+    fileData,
+    fileHash: crypto
+      .createHash('sha256')
+      .update(fileData, 'utf8')
+      .digest('hex')
+  })
+}
 /**
  * エントリーポイント
  */
@@ -63,20 +69,28 @@ async function main() {
   )
 
   // デプロイするファイルのリストを指定してアップロード先のURLを取得する
-  const uploadURL = await setTargetFiles(accessToken, createdVersionName)
-  console.log(`proc${proc++} setTargetFiles finish ! uploadURL:${uploadURL}`)
+  const { uploadUrl, uploadRequiredHashes } = await setTargetFiles(
+    accessToken,
+    createdVersionName,
+    deployFiles
+  )
+  console.log(`proc${proc++} setTargetFiles finish ! uploadURL:${uploadUrl}`)
+  console.log(uploadRequiredHashes)
 
   // 必要なファイルをアップロードする
-  const responseUploadFiles = await uploadFiles(
-    accessToken,
-    uploadURL,
-    deployTargetPath
-  )
-  console.log(
-    `proc${proc++} uploadFiles finish ! response status:${
-      responseUploadFiles.statusCode
-    }`
-  )
+  for (const key of Object.keys(deployFiles)) {
+    if (uploadRequiredHashes.includes(deployFiles[key].fileHash)) {
+      const responseUploadFiles = await uploadFiles(
+        accessToken,
+        uploadUrl,
+        deployFiles[key]
+      )
+      console.log(
+        `proc${proc}[sub routine] uploadFiles ${deployFiles[key].fileHash} response status${responseUploadFiles.statusCode}`
+      )
+    }
+  }
+  console.log(`proc${proc++} uploadFiles finish ! `)
 
   // バージョンのステータスを FINALIZED に更新する
   const responseFinalize = await finalizeStatus(accessToken, createdVersionName)
@@ -127,8 +141,6 @@ async function getAccessToken() {
     ['https://www.googleapis.com/auth/firebase'],
     null
   )
-  console.log(keys.client_email.slice(0, -2))
-  console.log(keys.private_key.slice(0, -2))
   const result = await client.authorize().catch(console.error())
   return result.access_token
 }
@@ -225,14 +237,22 @@ function createSiteVersion(accessToken) {
  * デプロイするファイルのリストを指定してアップロード先のURLを取得する
  * 事前にデプロイするファイルをgzipしておく
  */
-function setTargetFiles(accessToken, versionId) {
+function setTargetFiles(accessToken, versionId, deployFiles) {
   return new Promise((resolve) => {
     function callback(error, response, body) {
       if (!error && response.statusCode === 200) {
-        resolve(body.uploadUrl)
+        resolve({
+          uploadUrl: body.uploadUrl,
+          uploadRequiredHashes: body.uploadRequiredHashes
+        })
       } else {
         console.log(`error occurred at setTargetFiles: ${response.body}`)
       }
+    }
+
+    const files = {}
+    for (const key of Object.keys(deployFiles)) {
+      files[`/${deployFiles[key].fileName}`] = deployFiles[key].fileHash
     }
 
     const options = {
@@ -246,9 +266,7 @@ function setTargetFiles(accessToken, versionId) {
         Authorization: 'Bearer ' + accessToken
       },
       json: {
-        files: {
-          '/404.html': fileHash
-        }
+        files
       }
     }
     request(options, callback)
@@ -259,7 +277,7 @@ function setTargetFiles(accessToken, versionId) {
  * 必要なファイルをアップロードする
  * 取得したuploadUrlにアップロードするファイルハッシュを追加してgzをアップロードする
  */
-function uploadFiles(accessToken, uploadUrl) {
+function uploadFiles(accessToken, uploadUrl, deployFile) {
   return new Promise((resolve) => {
     function callback(error, response) {
       if (!error && response.statusCode === 200) {
@@ -269,16 +287,15 @@ function uploadFiles(accessToken, uploadUrl) {
       }
     }
 
-    const data = deployFile
     const options = {
-      url: uploadUrl + '/' + fileHash,
+      url: uploadUrl + '/' + deployFile.fileHash,
       method: 'POST',
       headers: {
         'Content-type': 'application/octet-stream',
         Authorization: 'Bearer ' + accessToken,
-        'Content-Length': data.length
+        'Content-Length': deployFile.fileData.length
       },
-      body: data
+      body: deployFile.fileData
     }
     request(options, callback)
   })

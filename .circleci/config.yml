@@ -54,7 +54,7 @@ jobs:
 workflows:
   build_test:
     jobs:
-      - setup:
+      - setup
       # - deploy_storybook:
       #     requires:
       #       - setup
