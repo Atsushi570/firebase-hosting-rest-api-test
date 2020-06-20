@@ -31,11 +31,14 @@ jobs:
     steps:
       - checkout
       - run:
-          name: npm install
-          command: npm install
-      - run:
-          name: deploy
-          command: node ./scripts/deploy.js
+          name: test
+          command: echo $CIRCLE_BRANCH
+      # - run:
+      #     name: npm install
+      #     command: npm install
+      # - run:
+      #     name: deploy
+      #     command: node ./scripts/deploy.js
 
   deploy_storybook:
     executor:
