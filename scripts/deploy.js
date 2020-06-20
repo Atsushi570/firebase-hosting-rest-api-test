@@ -69,24 +69,28 @@ async function main() {
   )
 
   // デプロイするファイルのリストを指定してアップロード先のURLを取得する
-  const uploadURL = await setTargetFiles(
+  const { uploadUrl, uploadRequiredHashes } = await setTargetFiles(
     accessToken,
     createdVersionName,
     deployFiles
   )
-  console.log(`proc${proc++} setTargetFiles finish ! uploadURL:${uploadURL}`)
+  console.log(`proc${proc++} setTargetFiles finish ! uploadURL:${uploadUrl}`)
+  console.log(uploadRequiredHashes)
 
   // 必要なファイルをアップロードする
-  const responseUploadFiles = await uploadFiles(
-    accessToken,
-    uploadURL,
-    deployFiles[0]
-  )
-  console.log(
-    `proc${proc++} uploadFiles finish ! response status:${
-      responseUploadFiles.statusCode
-    }`
-  )
+  for (const key of Object.keys(deployFiles)) {
+    if (uploadRequiredHashes.includes(deployFiles[key].fileHash)) {
+      const responseUploadFiles = await uploadFiles(
+        accessToken,
+        uploadUrl,
+        deployFiles[key]
+      )
+      console.log(
+        `proc${proc}[sub routine] uploadFiles ${deployFiles[key].fileHash} response status${responseUploadFiles.statusCode}`
+      )
+    }
+  }
+  console.log(`proc${proc++} uploadFiles finish ! `)
 
   // バージョンのステータスを FINALIZED に更新する
   const responseFinalize = await finalizeStatus(accessToken, createdVersionName)
@@ -237,7 +241,10 @@ function setTargetFiles(accessToken, versionId, deployFiles) {
   return new Promise((resolve) => {
     function callback(error, response, body) {
       if (!error && response.statusCode === 200) {
-        resolve(body.uploadUrl)
+        resolve({
+          uploadUrl: body.uploadUrl,
+          uploadRequiredHashes: body.uploadRequiredHashes
+        })
       } else {
         console.log(`error occurred at setTargetFiles: ${response.body}`)
       }
