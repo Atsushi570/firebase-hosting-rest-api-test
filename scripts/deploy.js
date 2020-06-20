@@ -13,13 +13,13 @@ const { JWT } = require('google-auth-library')
 
 // googleのAPIからダウンロードしたサービスアカウントの認証情報を読み込む
 // https://console.developers.google.com/
-// const keys = require('./jwt.keys.json') // localでの検証用
-// keys.site_name = keys.project_id
-const keys = {
-  site_name: process.env.PROJECT_ID,
-  client_email: process.env.CLIENT_EMAIL,
-  private_key: process.env.PRIVATE_KEY.replace(/\\n/g, '\n') // replaceしないとtokenを取得できない
-}
+const keys = require('./jwt.keys.json') // localでの検証用
+keys.site_name = keys.project_id // localでの検証用
+// const keys = {
+//   site_name: process.env.PROJECT_ID,
+//   client_email: process.env.CLIENT_EMAIL,
+//   private_key: process.env.PRIVATE_KEY.replace(/\\n/g, '\n') // replaceしないとtokenを取得できない
+// }
 
 // 指定したディレクトリにあるファイルを再帰的に読み込み、ファイルパスのリストを作成する
 const readdirRecursively = (dir, files = []) => {
@@ -34,20 +34,26 @@ const readdirRecursively = (dir, files = []) => {
   }
   return files
 }
-const deployTargetPaths = readdirRecursively(
-  path.join(path.dirname(__dirname), 'storybook-static')
+const storybookDirectoryPath = path.join(
+  path.dirname(__dirname),
+  'storybook-static'
 )
+const deployTargetPaths = readdirRecursively(storybookDirectoryPath)
 
 // アップロードするファイルオブジェクトのリストを作成する
 const deployFiles = []
 for (const key of Object.keys(deployTargetPaths)) {
-  const fileData = zlib.gzipSync(fs.readFileSync(deployTargetPaths[key]))
+  const binaryData = zlib.gzipSync(fs.readFileSync(deployTargetPaths[key]))
   deployFiles.push({
-    fileName: path.basename(deployTargetPaths[key]),
-    fileData,
-    fileHash: crypto
+    // path: `${process.env.$CIRCLE_BRANCH}/${deployTargetPaths[key].replace(
+    //   storybookDirectoryPath,
+    //   ''
+    // )}`,
+    path: '/test1' + deployTargetPaths[key].replace(storybookDirectoryPath, ''), // local検証用
+    binaryData,
+    hash: crypto
       .createHash('sha256')
-      .update(fileData, 'utf8')
+      .update(binaryData, 'utf8')
       .digest('hex')
   })
 }
@@ -73,7 +79,7 @@ async function main() {
   // versionNameで指定したversionのファイル構成を取得する
   const latestDeployedFiles = await getVersionFiles(accessToken, latestVersion)
   console.log(
-    `proc${proc++} getVersionFiles finish ! files:${
+    `proc${proc++} getVersionFiles finish ! current number of deployed files:${
       latestDeployedFiles.files.length
     }`
   )
@@ -84,29 +90,47 @@ async function main() {
     `proc${proc++} createSiteVersion finish !  version name:${createdVersionName}`
   )
 
-  // デプロイするファイルのリストを指定してアップロード先のURLを取得する
+  for (const file of latestDeployedFiles.files) {
+    if (!deployFiles.some((deployFile) => deployFile.path === file.path)) {
+      deployFiles.push({
+        path: file.path,
+        hash: file.hash
+      })
+    }
+  }
+
+  // デプロイするファイルのリストを指定してアップロード先のURLの取得とデプロイするファイル構成を指定する
   const { uploadUrl, uploadRequiredHashes } = await setTargetFiles(
     accessToken,
     createdVersionName,
     deployFiles
   )
-  console.log(`proc${proc++} setTargetFiles finish ! uploadURL:${uploadUrl}`)
-  console.log(uploadRequiredHashes)
+  if (uploadRequiredHashes) {
+    console.log(
+      `proc${proc++} setTargetFiles finish ! upload file count:${
+        uploadRequiredHashes.length
+      }`
+    )
+  } else {
+    console.log(`proc${proc++} no file is specified to upload`)
+  }
 
   // 必要なファイルをアップロードする
   if (uploadRequiredHashes) {
     for (const key of Object.keys(deployFiles)) {
-      if (uploadRequiredHashes.includes(deployFiles[key].fileHash)) {
+      if (uploadRequiredHashes.includes(deployFiles[key].hash)) {
         const responseUploadFiles = await uploadFiles(
           accessToken,
           uploadUrl,
           deployFiles[key]
         )
         console.log(
-          `proc${proc}[sub routine] uploadFiles ${deployFiles[key].fileHash} response status${responseUploadFiles.statusCode}`
+          `proc${proc}[sub routine] uploadFiles ${deployFiles[key].path} response status${responseUploadFiles.statusCode}`
         )
       } else {
-        console.log('no need to upload file.')
+        console.log(
+          `proc${proc}[sub routine] no need to upload file :${deployFiles[key].path}`
+        )
       }
     }
   }
@@ -272,8 +296,7 @@ function setTargetFiles(accessToken, versionId, deployFiles) {
 
     const files = {}
     for (const key of Object.keys(deployFiles)) {
-      files[`/${process.env.CIRCLE_BRANCH}/${deployFiles[key].fileName}`] =
-        deployFiles[key].fileHash
+      files[`${deployFiles[key].path}`] = deployFiles[key].hash
     }
 
     const options = {
@@ -309,14 +332,14 @@ function uploadFiles(accessToken, uploadUrl, deployFile) {
     }
 
     const options = {
-      url: uploadUrl + '/' + deployFile.fileHash,
+      url: uploadUrl + '/' + deployFile.hash,
       method: 'POST',
       headers: {
         'Content-type': 'application/octet-stream',
         Authorization: 'Bearer ' + accessToken,
-        'Content-Length': deployFile.fileData.length
+        'Content-Length': deployFile.binaryData.length
       },
-      body: deployFile.fileData
+      body: deployFile.binaryData
     }
     request(options, callback)
   })
