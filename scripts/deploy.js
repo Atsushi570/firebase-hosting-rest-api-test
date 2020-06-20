@@ -14,28 +14,50 @@ const { JWT } = require('google-auth-library')
 // googleのAPIからダウンロードしたサービスアカウントの認証情報を読み込む
 // https://console.developers.google.com/
 // const keys = require('./jwt.keys.json') // localでの検証用
+// keys.site_name = keys.project_id // localでの検証用
 const keys = {
   site_name: process.env.PROJECT_ID,
   client_email: process.env.CLIENT_EMAIL,
   private_key: process.env.PRIVATE_KEY.replace(/\\n/g, '\n') // replaceしないとtokenを取得できない
 }
 
-// 指定したディレクトリにあるファイルを再帰的に読み込み、アップロードするファイルオブジェクトのリストを作成する
-const deployTargetPaths = readdirRecursively(
-  path.join(path.dirname(__dirname), 'public')
+// 指定したディレクトリにあるファイルを再帰的に読み込み、ファイルパスのリストを作成する
+const readdirRecursively = (dir, files = []) => {
+  const dirents = fs.readdirSync(dir, { withFileTypes: true })
+  const dirs = []
+  for (const dirent of dirents) {
+    if (dirent.isDirectory()) dirs.push(`${dir}/${dirent.name}`)
+    if (dirent.isFile()) files.push(`${dir}/${dirent.name}`)
+  }
+  for (const d of dirs) {
+    files = readdirRecursively(d, files)
+  }
+  return files
+}
+const storybookDirectoryPath = path.join(
+  path.dirname(__dirname),
+  'storybook-static'
 )
+const deployTargetPaths = readdirRecursively(storybookDirectoryPath)
+
+// アップロードするファイルオブジェクトのリストを作成する
 const deployFiles = []
 for (const key of Object.keys(deployTargetPaths)) {
-  const fileData = zlib.gzipSync(fs.readFileSync(deployTargetPaths[key]))
+  const binaryData = zlib.gzipSync(fs.readFileSync(deployTargetPaths[key]))
   deployFiles.push({
-    fileName: path.basename(deployTargetPaths[key]),
-    fileData,
-    fileHash: crypto
+    path: `/${process.env.CIRCLE_BRANCH}${deployTargetPaths[key].replace(
+      storybookDirectoryPath,
+      ''
+    )}`,
+    // path: '/test1' + deployTargetPaths[key].replace(storybookDirectoryPath, ''), // localでの検証用
+    binaryData,
+    hash: crypto
       .createHash('sha256')
-      .update(fileData, 'utf8')
+      .update(binaryData, 'utf8')
       .digest('hex')
   })
 }
+
 /**
  * エントリーポイント
  */
@@ -44,9 +66,7 @@ async function main() {
 
   // API リクエストを認証して承認するためのaccess tokenを取得する
   const accessToken = await getAccessToken()
-  console.log(
-    `proc${proc++} getAccessToken finish ! access token:${accessToken}`
-  )
+  console.log(`proc${proc++} getAccessToken finish !`)
 
   // 最後にreleasesされたサイトのversionNameを取得する
   const latestVersion = await getLatestVersionName(accessToken)
@@ -57,10 +77,20 @@ async function main() {
   // versionNameで指定したversionのファイル構成を取得する
   const latestDeployedFiles = await getVersionFiles(accessToken, latestVersion)
   console.log(
-    `proc${proc++} getVersionFiles finish ! files:${
+    `proc${proc++} getVersionFiles finish ! current number of deployed files:${
       latestDeployedFiles.files.length
     }`
   )
+
+  // deployFilesに現在hostされているファイル情報を追加する
+  for (const file of latestDeployedFiles.files) {
+    if (!deployFiles.some((deployFile) => deployFile.path === file.path)) {
+      deployFiles.push({
+        path: file.path,
+        hash: file.hash
+      })
+    }
+  }
 
   // サイトの新しいバージョンを作成する
   const createdVersionName = await createSiteVersion(accessToken)
@@ -68,26 +98,39 @@ async function main() {
     `proc${proc++} createSiteVersion finish !  version name:${createdVersionName}`
   )
 
-  // デプロイするファイルのリストを指定してアップロード先のURLを取得する
+  // デプロイするファイルのリストを指定してアップロード先のURLの取得とデプロイするファイル構成を指定する
   const { uploadUrl, uploadRequiredHashes } = await setTargetFiles(
     accessToken,
     createdVersionName,
     deployFiles
   )
-  console.log(`proc${proc++} setTargetFiles finish ! uploadURL:${uploadUrl}`)
-  console.log(uploadRequiredHashes)
+  if (uploadRequiredHashes) {
+    console.log(
+      `proc${proc++} setTargetFiles finish ! Number of files that need to be uploaded:${
+        uploadRequiredHashes.length
+      }`
+    )
+  } else {
+    console.log(`proc${proc++} no file is specified to upload`)
+  }
 
   // 必要なファイルをアップロードする
-  for (const key of Object.keys(deployFiles)) {
-    if (uploadRequiredHashes.includes(deployFiles[key].fileHash)) {
-      const responseUploadFiles = await uploadFiles(
-        accessToken,
-        uploadUrl,
-        deployFiles[key]
-      )
-      console.log(
-        `proc${proc}[sub routine] uploadFiles ${deployFiles[key].fileHash} response status${responseUploadFiles.statusCode}`
-      )
+  if (uploadRequiredHashes) {
+    for (const key of Object.keys(deployFiles)) {
+      if (uploadRequiredHashes.includes(deployFiles[key].hash)) {
+        const responseUploadFiles = await uploadFiles(
+          accessToken,
+          uploadUrl,
+          deployFiles[key]
+        )
+        console.log(
+          `proc${proc}[sub routine] uploadFile: ${deployFiles[key].path} response status${responseUploadFiles.statusCode}`
+        )
+      } else {
+        console.log(
+          `proc${proc}[sub routine] no need to upload file :${deployFiles[key].path}`
+        )
+      }
     }
   }
   console.log(`proc${proc++} uploadFiles finish ! `)
@@ -110,24 +153,6 @@ async function main() {
 }
 
 main().catch(console.error)
-
-/**
- * 指定したディレクトリ配下に存在するファイルのパスを再帰的に取得してリストで返却する
- * @param {string} dir 探索対象のディレクトリパス
- */
-function readdirRecursively(dir) {
-  let files = []
-  const dirents = fs.readdirSync(dir, { withFileTypes: true })
-  const dirs = []
-  for (const dirent of dirents) {
-    if (dirent.isDirectory()) dirs.push(`${dir}/${dirent.name}`)
-    if (dirent.isFile()) files.push(`${dir}/${dirent.name}`)
-  }
-  for (const d of dirs) {
-    files = readdirRecursively(d, files)
-  }
-  return files
-}
 
 /**
  * API リクエストを認証して承認するためのアクセス トークンを取得する
@@ -252,7 +277,7 @@ function setTargetFiles(accessToken, versionId, deployFiles) {
 
     const files = {}
     for (const key of Object.keys(deployFiles)) {
-      files[`/${deployFiles[key].fileName}`] = deployFiles[key].fileHash
+      files[`${deployFiles[key].path}`] = deployFiles[key].hash
     }
 
     const options = {
@@ -288,14 +313,14 @@ function uploadFiles(accessToken, uploadUrl, deployFile) {
     }
 
     const options = {
-      url: uploadUrl + '/' + deployFile.fileHash,
+      url: uploadUrl + '/' + deployFile.hash,
       method: 'POST',
       headers: {
         'Content-type': 'application/octet-stream',
         Authorization: 'Bearer ' + accessToken,
-        'Content-Length': deployFile.fileData.length
+        'Content-Length': deployFile.binaryData.length
       },
-      body: deployFile.fileData
+      body: deployFile.binaryData
     }
     request(options, callback)
   })
