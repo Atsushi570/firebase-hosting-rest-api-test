@@ -45,7 +45,7 @@ const deployFiles = []
 for (const key of Object.keys(deployTargetPaths)) {
   const binaryData = zlib.gzipSync(fs.readFileSync(deployTargetPaths[key]))
   deployFiles.push({
-    path: `${process.env.$CIRCLE_BRANCH}/${deployTargetPaths[key].replace(
+    path: `/${process.env.$CIRCLE_BRANCH}/${deployTargetPaths[key].replace(
       storybookDirectoryPath,
       ''
     )}`,
