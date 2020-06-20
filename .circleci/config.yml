@@ -31,33 +31,23 @@ jobs:
     steps:
       - checkout
       - run:
-          name: test
-          command: echo $CIRCLE_BRANCH
-      # - run:
-      #     name: npm install
-      #     command: npm install
-      # - run:
-      #     name: deploy
-      #     command: node ./scripts/deploy.js
+          name: npm install
+          command: npm install
 
   deploy_storybook:
     executor:
       name: default
     steps:
       - checkout
-      - command: echo deploy
-      # - restore_modules
-      # - build_storybook
-      # - run:
-      #     name: deploy storybook to Firebase Hosting
-      #     working_directory: ~/workspace/front/src
-      #     command: ./node_modules/.bin/firebase deploy --token=$FIREBASE_TOKEN
+      - run:
+          name: npm install
+          command: npm install
+      - build_storybook
+      - run:
+          name: deploy
+          command: node ./scripts/deploy.js
 
 workflows:
   build_test:
     jobs:
-      - setup
-      # - deploy_storybook:
-      #     requires:
-      #       - setup
-
+      - deploy_storybook
