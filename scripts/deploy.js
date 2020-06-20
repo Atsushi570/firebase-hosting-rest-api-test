@@ -13,13 +13,13 @@ const { JWT } = require('google-auth-library')
 
 // googleのAPIからダウンロードしたサービスアカウントの認証情報を読み込む
 // https://console.developers.google.com/
-// const keys = require('./jwt.keys.json') // localでの検証用
-// keys.site_name = keys.project_id // localでの検証用
-const keys = {
-  site_name: process.env.PROJECT_ID,
-  client_email: process.env.CLIENT_EMAIL,
-  private_key: process.env.PRIVATE_KEY.replace(/\\n/g, '\n') // replaceしないとtokenを取得できない
-}
+const keys = require('./jwt.keys.json') // localでの検証用
+keys.site_name = keys.project_id // localでの検証用
+// const keys = {
+//   site_name: process.env.PROJECT_ID,
+//   client_email: process.env.CLIENT_EMAIL,
+//   private_key: process.env.PRIVATE_KEY.replace(/\\n/g, '\n') // replaceしないとtokenを取得できない
+// }
 
 // 指定したディレクトリにあるファイルを再帰的に読み込み、ファイルパスのリストを作成する
 const readdirRecursively = (dir, files = []) => {
@@ -45,11 +45,11 @@ const deployFiles = []
 for (const key of Object.keys(deployTargetPaths)) {
   const binaryData = zlib.gzipSync(fs.readFileSync(deployTargetPaths[key]))
   deployFiles.push({
-    path: `/${process.env.CIRCLE_BRANCH}${deployTargetPaths[key].replace(
-      storybookDirectoryPath,
-      ''
-    )}`,
-    // path: '/test1' + deployTargetPaths[key].replace(storybookDirectoryPath, ''), // localでの検証用
+    // path: `/${process.env.CIRCLE_BRANCH}${deployTargetPaths[key].replace(
+    //   storybookDirectoryPath,
+    //   ''
+    // )}`,
+    path: '/test2' + deployTargetPaths[key].replace(storybookDirectoryPath, ''), // localでの検証用
     binaryData,
     hash: crypto
       .createHash('sha256')
@@ -75,22 +75,29 @@ async function main() {
   )
 
   // versionNameで指定したversionのファイル構成を取得する
-  const latestDeployedFiles = await getVersionFiles(accessToken, latestVersion)
-  console.log(
-    `proc${proc++} getVersionFiles finish ! current number of deployed files:${
-      latestDeployedFiles.files.length
-    }`
-  )
+  let nextPageToken = null
+  while (true) {
+    const latestDeployedFiles = await getVersionFiles(
+      accessToken,
+      latestVersion,
+      nextPageToken
+    )
 
-  // deployFilesに現在hostされているファイル情報を追加する
-  for (const file of latestDeployedFiles.files) {
-    if (!deployFiles.some((deployFile) => deployFile.path === file.path)) {
-      deployFiles.push({
-        path: file.path,
-        hash: file.hash
-      })
+    // deployFilesに現在hostされているファイル情報を追加する
+    for (const file of latestDeployedFiles.files) {
+      if (!deployFiles.some((deployFile) => deployFile.path === file.path)) {
+        deployFiles.push({
+          path: file.path,
+          hash: file.hash
+        })
+      }
     }
+
+    // 全てのファイル情報を取得できたらループを抜ける
+    if (!latestDeployedFiles.nextPageToken) break
+    nextPageToken = latestDeployedFiles.nextPageToken
   }
+  console.log(`proc${proc++} getVersionFiles finish !`)
 
   // サイトの新しいバージョンを作成する
   const createdVersionName = await createSiteVersion(accessToken)
@@ -199,7 +206,7 @@ function getLatestVersionName(accessToken) {
 /**
  * 指定したバージョンのファイル構成を取得する
  */
-function getVersionFiles(accessToken, latestVersion) {
+function getVersionFiles(accessToken, latestVersion, nextPageToken) {
   return new Promise((resolve) => {
     function callback(error, response, body) {
       if (!error && response.statusCode === 200) {
@@ -209,8 +216,12 @@ function getVersionFiles(accessToken, latestVersion) {
       }
     }
 
+    const url = nextPageToken
+      ? `https://firebasehosting.googleapis.com/v1beta1/${latestVersion}/files?pageSize=30&pageToken=${nextPageToken}`
+      : `https://firebasehosting.googleapis.com/v1beta1/${latestVersion}/files?pageSize=30`
+
     const options = {
-      url: `https://firebasehosting.googleapis.com/v1beta1/${latestVersion}/files`,
+      url,
       method: 'GET',
       headers: {
         Authorization: 'Bearer ' + accessToken
