@@ -66,9 +66,7 @@ async function main() {
 
   // API リクエストを認証して承認するためのaccess tokenを取得する
   const accessToken = await getAccessToken()
-  console.log(
-    `proc${proc++} getAccessToken finish ! access token:${accessToken}`
-  )
+  console.log(`proc${proc++} getAccessToken finish !`)
 
   // 最後にreleasesされたサイトのversionNameを取得する
   const latestVersion = await getLatestVersionName(accessToken)
@@ -84,12 +82,7 @@ async function main() {
     }`
   )
 
-  // サイトの新しいバージョンを作成する
-  const createdVersionName = await createSiteVersion(accessToken)
-  console.log(
-    `proc${proc++} createSiteVersion finish !  version name:${createdVersionName}`
-  )
-
+  // deployFilesに現在hostされているファイル情報を追加する
   for (const file of latestDeployedFiles.files) {
     if (!deployFiles.some((deployFile) => deployFile.path === file.path)) {
       deployFiles.push({
@@ -99,6 +92,12 @@ async function main() {
     }
   }
 
+  // サイトの新しいバージョンを作成する
+  const createdVersionName = await createSiteVersion(accessToken)
+  console.log(
+    `proc${proc++} createSiteVersion finish !  version name:${createdVersionName}`
+  )
+
   // デプロイするファイルのリストを指定してアップロード先のURLの取得とデプロイするファイル構成を指定する
   const { uploadUrl, uploadRequiredHashes } = await setTargetFiles(
     accessToken,
@@ -107,7 +106,7 @@ async function main() {
   )
   if (uploadRequiredHashes) {
     console.log(
-      `proc${proc++} setTargetFiles finish ! upload file count:${
+      `proc${proc++} setTargetFiles finish ! Number of files that need to be uploaded:${
         uploadRequiredHashes.length
       }`
     )
@@ -125,7 +124,7 @@ async function main() {
           deployFiles[key]
         )
         console.log(
-          `proc${proc}[sub routine] uploadFiles ${deployFiles[key].path} response status${responseUploadFiles.statusCode}`
+          `proc${proc}[sub routine] uploadFile: ${deployFiles[key].path} response status${responseUploadFiles.statusCode}`
         )
       } else {
         console.log(
@@ -154,24 +153,6 @@ async function main() {
 }
 
 main().catch(console.error)
-
-// /**
-//  * 指定したディレクトリ配下に存在するファイルのパスを再帰的に取得してリストで返却する
-//  * @param {string} dir 探索対象のディレクトリパス
-//  */
-// function readdirRecursively(dir) {
-//   let files = []
-//   const dirents = fs.readdirSync(dir, { withFileTypes: true })
-//   const dirs = []
-//   for (const dirent of dirents) {
-//     if (dirent.isDirectory()) dirs.push(`${dir}/${dirent.name}`)
-//     if (dirent.isFile()) files.push(`${dir}/${dirent.name}`)
-//   }
-//   for (const d of dirs) {
-//     files = readdirRecursively(d, files)
-//   }
-//   return files
-// }
 
 /**
  * API リクエストを認証して承認するためのアクセス トークンを取得する
