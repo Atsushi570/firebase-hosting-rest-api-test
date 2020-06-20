@@ -22,7 +22,6 @@ commands:
     steps:
       - run: 
           name: sotrybookをビルド
-          working_directory: ~/workspace/front/src
           command: npm run build-storybook
 
 jobs:

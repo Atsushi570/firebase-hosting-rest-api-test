@@ -8,7 +8,7 @@
     "dev": "nuxt",
     "build": "nuxt build",
     "start": "nuxt start",
-    "storybook": "start-storybook -p 6006",
+    "storybook": "start-storybook --ci -p 9001 -c .storybook",
     "build-storybook": "build-storybook",
     "generate": "nuxt generate",
     "lint": "eslint --ext .js,.vue --ignore-path .gitignore ."
