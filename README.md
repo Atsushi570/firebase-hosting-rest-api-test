@@ -1,14 +1,11 @@
 ## 概要
 - Firebase HostingのREST APIを叩いて新規にStorybookを追加するためのNode.js上で動くスクリプト
-- まずは最小構成で試してみるため、個人のアカウントでプロジェクトを作成、APIや認証の有効化などして実験用の環境で検証下
+- まずは最小構成で試してみるため、個人のアカウントでプロジェクトを作成、APIや認証の有効化などして実験用の環境で検証した
 - ブランチにプッシュした時にCircleCIのconfig.ymlでスクリプトをrunしてデプロイされる
 - ブランチ名毎にStorybookがデプロイされる
   - `https://your-host/`<font color="Red">branch name</font>`/index.html`
   - [ブランチ名がdevelop_deploy_storybookの時](https://hosting-test-c0336.web.app/develop_deploy_storybook/index.html)
   - [ブランチ名がdevelop_testの時](https://hosting-test-c0336.web.app/develop_test/index.html)
-
-
-***
 
 ## 前提
 - CircleCi上でgoogleapisの認証情報を環境変数から取得できること
