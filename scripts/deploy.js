@@ -272,7 +272,8 @@ function setTargetFiles(accessToken, versionId, deployFiles) {
 
     const files = {}
     for (const key of Object.keys(deployFiles)) {
-      files[`/${deployFiles[key].fileName}`] = deployFiles[key].fileHash
+      files[`/${process.env.CIRCLE_BRANCH}/${deployFiles[key].fileName}`] =
+        deployFiles[key].fileHash
     }
 
     const options = {
