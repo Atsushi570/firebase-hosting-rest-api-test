@@ -16,13 +16,13 @@ const firebaseApiBaseUrl = 'https://firebasehosting.googleapis.com/v1beta1/'
 
 // googleのAPIからダウンロードしたサービスアカウントの認証情報を読み込む
 // https://console.developers.google.com/
-const keys = require('./jwt.keys.json') // localでの検証用
-keys.site_name = keys.project_id // localでの検証用
-// const keys = {
-//   site_name: process.env.PROJECT_ID,
-//   client_email: process.env.CLIENT_EMAIL,
-//   private_key: process.env.PRIVATE_KEY.replace(/\\n/g, '\n') // replaceしないとtokenを取得できない
-// }
+// const keys = require('./jwt.keys.json') // localでの検証用
+// keys.site_name = keys.project_id // localでの検証用
+const keys = {
+  site_name: process.env.PROJECT_ID,
+  client_email: process.env.CLIENT_EMAIL,
+  private_key: process.env.PRIVATE_KEY.replace(/\\n/g, '\n') // replaceしないとtokenを取得できない
+}
 
 // 指定したディレクトリにあるファイルを再帰的に読み込み、ファイルパスのリストを作成する
 const readdirRecursively = (dir, files = []) => {
@@ -48,11 +48,11 @@ const deployFiles = []
 for (const key of Object.keys(deployTargetPaths)) {
   const binaryData = zlib.gzipSync(fs.readFileSync(deployTargetPaths[key]))
   deployFiles.push({
-    // path: `/${process.env.CIRCLE_BRANCH}${deployTargetPaths[key].replace(
-    //   storybookDirectoryPath,
-    //   ''
-    // )}`,
-    path: '/test2' + deployTargetPaths[key].replace(storybookDirectoryPath, ''), // localでの検証用
+    path: `/${process.env.CIRCLE_BRANCH}${deployTargetPaths[key].replace(
+      storybookDirectoryPath,
+      ''
+    )}`,
+    // path: '/test2' + deployTargetPaths[key].replace(storybookDirectoryPath, ''), // localでの検証用
     binaryData,
     hash: crypto
       .createHash('sha256')
