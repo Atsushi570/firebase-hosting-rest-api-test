@@ -11,6 +11,9 @@ const path = require('path')
 const request = require('request')
 const { JWT } = require('google-auth-library')
 
+// firebase Hosting REST APIのURL共通部を定義する
+const firebaseApiBaseUrl = 'https://firebasehosting.googleapis.com/v1beta1/'
+
 // googleのAPIからダウンロードしたサービスアカウントの認証情報を読み込む
 // https://console.developers.google.com/
 // const keys = require('./jwt.keys.json') // localでの検証用
@@ -49,7 +52,7 @@ for (const key of Object.keys(deployTargetPaths)) {
       storybookDirectoryPath,
       ''
     )}`,
-    // path: '/test1' + deployTargetPaths[key].replace(storybookDirectoryPath, ''), // localでの検証用
+    // path: '/test2' + deployTargetPaths[key].replace(storybookDirectoryPath, ''), // localでの検証用
     binaryData,
     hash: crypto
       .createHash('sha256')
@@ -75,22 +78,29 @@ async function main() {
   )
 
   // versionNameで指定したversionのファイル構成を取得する
-  const latestDeployedFiles = await getVersionFiles(accessToken, latestVersion)
-  console.log(
-    `proc${proc++} getVersionFiles finish ! current number of deployed files:${
-      latestDeployedFiles.files.length
-    }`
-  )
+  let nextPageToken = null
+  while (true) {
+    const latestDeployedFiles = await getVersionFiles(
+      accessToken,
+      latestVersion,
+      nextPageToken
+    )
 
-  // deployFilesに現在hostされているファイル情報を追加する
-  for (const file of latestDeployedFiles.files) {
-    if (!deployFiles.some((deployFile) => deployFile.path === file.path)) {
-      deployFiles.push({
-        path: file.path,
-        hash: file.hash
-      })
+    // deployFilesに現在hostされているファイル情報を追加する
+    for (const file of latestDeployedFiles.files) {
+      if (!deployFiles.some((deployFile) => deployFile.path === file.path)) {
+        deployFiles.push({
+          path: file.path,
+          hash: file.hash
+        })
+      }
     }
+
+    // 全てのファイル情報を取得できたらループを抜ける
+    if (!latestDeployedFiles.nextPageToken) break
+    nextPageToken = latestDeployedFiles.nextPageToken
   }
+  console.log(`proc${proc++} getVersionFiles finish !`)
 
   // サイトの新しいバージョンを作成する
   const createdVersionName = await createSiteVersion(accessToken)
@@ -185,8 +195,7 @@ function getLatestVersionName(accessToken) {
     }
 
     const options = {
-      url:
-        'https://firebasehosting.googleapis.com/v1beta1/sites/hosting-test-c0336/releases?pageSize=1',
+      url: `${firebaseApiBaseUrl}sites/${keys.site_name}/releases?pageSize=1`,
       method: 'GET',
       headers: {
         Authorization: 'Bearer ' + accessToken
@@ -199,7 +208,7 @@ function getLatestVersionName(accessToken) {
 /**
  * 指定したバージョンのファイル構成を取得する
  */
-function getVersionFiles(accessToken, latestVersion) {
+function getVersionFiles(accessToken, latestVersion, nextPageToken) {
   return new Promise((resolve) => {
     function callback(error, response, body) {
       if (!error && response.statusCode === 200) {
@@ -209,8 +218,12 @@ function getVersionFiles(accessToken, latestVersion) {
       }
     }
 
+    const url = nextPageToken
+      ? `${firebaseApiBaseUrl}${latestVersion}/files?pageSize=1000&pageToken=${nextPageToken}`
+      : `${firebaseApiBaseUrl}${latestVersion}/files?pageSize=1000`
+
     const options = {
-      url: `https://firebasehosting.googleapis.com/v1beta1/${latestVersion}/files`,
+      url,
       method: 'GET',
       headers: {
         Authorization: 'Bearer ' + accessToken
@@ -234,8 +247,7 @@ function createSiteVersion(accessToken) {
     }
 
     const options = {
-      url:
-        'https://firebasehosting.googleapis.com/v1beta1/sites/hosting-test-c0336/versions',
+      url: `${firebaseApiBaseUrl}sites/${keys.site_name}/versions`,
       method: 'POST',
       headers: {
         'Content-type': 'application/json',
@@ -281,10 +293,7 @@ function setTargetFiles(accessToken, versionId, deployFiles) {
     }
 
     const options = {
-      url:
-        'https://firebasehosting.googleapis.com/v1beta1/' +
-        versionId +
-        ':populateFiles',
+      url: `${firebaseApiBaseUrl}${versionId}:populateFiles`,
       method: 'POST',
       headers: {
         'Content-type': 'application/json',
@@ -340,10 +349,7 @@ function finalizeStatus(accessToken, versionId) {
     }
 
     const options = {
-      url:
-        'https://firebasehosting.googleapis.com/v1beta1/' +
-        versionId +
-        '?update_mask=status',
+      url: `${firebaseApiBaseUrl}${versionId}?update_mask=status`,
       method: 'PATCH',
       headers: {
         'Content-type': 'application/json',
@@ -369,7 +375,7 @@ function callDeploy(accessToken, versionId) {
     }
 
     const options = {
-      url: `https://firebasehosting.googleapis.com/v1beta1/sites/${keys.site_name}/releases?versionName=${versionId}`,
+      url: `${firebaseApiBaseUrl}sites/${keys.site_name}/releases?versionName=${versionId}`,
       method: 'POST',
       headers: {
         Authorization: 'Bearer ' + accessToken
