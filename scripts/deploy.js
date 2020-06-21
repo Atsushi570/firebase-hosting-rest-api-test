@@ -11,6 +11,9 @@ const path = require('path')
 const request = require('request')
 const { JWT } = require('google-auth-library')
 
+// firebase Hosting REST APIのURL共通部を定義する
+const firebaseApiBaseUrl = 'https://firebasehosting.googleapis.com/v1beta1/'
+
 // googleのAPIからダウンロードしたサービスアカウントの認証情報を読み込む
 // https://console.developers.google.com/
 const keys = require('./jwt.keys.json') // localでの検証用
@@ -192,8 +195,7 @@ function getLatestVersionName(accessToken) {
     }
 
     const options = {
-      url:
-        'https://firebasehosting.googleapis.com/v1beta1/sites/hosting-test-c0336/releases?pageSize=1',
+      url: `${firebaseApiBaseUrl}sites/${keys.site_name}/releases?pageSize=1`,
       method: 'GET',
       headers: {
         Authorization: 'Bearer ' + accessToken
@@ -217,8 +219,8 @@ function getVersionFiles(accessToken, latestVersion, nextPageToken) {
     }
 
     const url = nextPageToken
-      ? `https://firebasehosting.googleapis.com/v1beta1/${latestVersion}/files?pageSize=30&pageToken=${nextPageToken}`
-      : `https://firebasehosting.googleapis.com/v1beta1/${latestVersion}/files?pageSize=30`
+      ? `${firebaseApiBaseUrl}${latestVersion}/files?pageSize=1000&pageToken=${nextPageToken}`
+      : `${firebaseApiBaseUrl}${latestVersion}/files?pageSize=1000`
 
     const options = {
       url,
@@ -245,8 +247,7 @@ function createSiteVersion(accessToken) {
     }
 
     const options = {
-      url:
-        'https://firebasehosting.googleapis.com/v1beta1/sites/hosting-test-c0336/versions',
+      url: `${firebaseApiBaseUrl}sites/${keys.site_name}/versions`,
       method: 'POST',
       headers: {
         'Content-type': 'application/json',
@@ -292,10 +293,7 @@ function setTargetFiles(accessToken, versionId, deployFiles) {
     }
 
     const options = {
-      url:
-        'https://firebasehosting.googleapis.com/v1beta1/' +
-        versionId +
-        ':populateFiles',
+      url: `${firebaseApiBaseUrl}${versionId}:populateFiles`,
       method: 'POST',
       headers: {
         'Content-type': 'application/json',
@@ -351,10 +349,7 @@ function finalizeStatus(accessToken, versionId) {
     }
 
     const options = {
-      url:
-        'https://firebasehosting.googleapis.com/v1beta1/' +
-        versionId +
-        '?update_mask=status',
+      url: `${firebaseApiBaseUrl}${versionId}?update_mask=status`,
       method: 'PATCH',
       headers: {
         'Content-type': 'application/json',
@@ -380,7 +375,7 @@ function callDeploy(accessToken, versionId) {
     }
 
     const options = {
-      url: `https://firebasehosting.googleapis.com/v1beta1/sites/${keys.site_name}/releases?versionName=${versionId}`,
+      url: `${firebaseApiBaseUrl}sites/${keys.site_name}/releases?versionName=${versionId}`,
       method: 'POST',
       headers: {
         Authorization: 'Bearer ' + accessToken
