@@ -18,7 +18,7 @@
     "@nuxtjs/bulma": "^1.2.1",
     "@nuxtjs/dotenv": "^1.4.0",
     "google-auth-library": "^6.0.2",
-    "nuxt": "^2.0.0",
+    "nuxt": "^3.4.3",
     "request": "^2.88.2"
   },
   "devDependencies": {
